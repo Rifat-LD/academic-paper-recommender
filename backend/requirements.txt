@@ -1,0 +1,12 @@
+fastapi>=0.110.0
+uvicorn>=0.29.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+python-multipart>=0.0.9
+sqlmodel>=0.0.16
+# This version is required for Python 3.13
+sentence-transformers>=3.0.0
+# Standard math library for vector search (replaces faiss for now)
+numpy>=1.26.0
+pytest>=8.0.0
+httpx>=0.27.0
