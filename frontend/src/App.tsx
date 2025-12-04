@@ -1,35 +1,31 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import Header from './components/layout/Header';
+import SearchPage from './pages/SearchPage';
+// We should also create a simple Footer to match the design
+import Footer from './components/layout/Footer';
 
 function App() {
-  const [count, setCount] = useState(0)
+    const [isDark, setIsDark] = useState(() => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) return savedTheme === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }, [isDark]);
+
+    const toggleTheme = () => setIsDark(prev => !prev);
+
+    return (
+        // This div now controls the global background and text colors
+        <div className={`${isDark ? 'dark' : ''} font-sans bg-light text-dark dark:bg-dark-bg dark:text-light transition-colors duration-300`}>
+            <Header isDark={isDark} toggleTheme={toggleTheme} />
+            <SearchPage />
+            <Footer />
+        </div>
+    );
 }
 
-export default App
+export default App;
