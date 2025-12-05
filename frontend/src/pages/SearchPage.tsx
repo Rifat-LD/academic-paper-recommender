@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import SearchSection from '../components/features/SearchSection';
 import ResultsList from '../components/features/ResultsList';
+//import { searchService, UIPaper } from '../api/papers';
 
-interface Paper {
+interface Paper { //Must delete after 1st project update
     id: number;
     title: string;
     authors: string;
@@ -14,7 +15,7 @@ interface Paper {
 // 1. CONSTANTS
 const ITEMS_PER_PAGE = 6; // Shows 2 rows of 3 on desktop
 
-const mockResults: Paper[] = [
+const mockResults: Paper[] = [ //Must delete after 1st project update
     // ... (Keep your existing mock data here - duplicate the entries to test pagination if you want!)
     { id: 1, title: 'Deep Learning Approaches...', authors: 'Zhang, L.', year: 2023, abstract: 'This is abstract section', relevanceScore: 100 },
     { id: 2, title: 'Transformer Models...', authors: 'Patel, R.', year: 2024, abstract: 'This is abstract section', relevanceScore: 92 },
@@ -29,7 +30,8 @@ const mockResults: Paper[] = [
 
 export default function SearchPage() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [results, setResults] = useState<Paper[]>([]);
+    const [results, setResults] = useState<Paper[]>([]); //Must delete after 1st project update
+    //const [results, setResults] = useState<UIPaper[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<string>('Relevance');
 
@@ -80,6 +82,34 @@ export default function SearchPage() {
             setIsLoading(false);
         }
     };
+
+    /*const handleSearch = async (query: string) => {
+        setError(null);
+        if (!validateQuery(query)) return;
+
+        setIsLoading(true);
+        setCurrentPage(1); // Reset pagination
+
+        try {
+            // --- REAL API CALL START ---
+            // We fetch all relevant papers (e.g., top 50) and let frontend paginate
+            const data = await searchService.search(query, 50);
+            setResults(data);
+            // --- REAL API CALL END ---
+
+        } catch (err: any) {
+            console.error("Search Error:", err);
+            // Handle Axios errors gracefully
+            if (err.code === 'ERR_NETWORK') {
+                setError("Cannot connect to server. Is the backend running?");
+            } else {
+                setError("Failed to fetch results. Please try again.");
+            }
+            setResults([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };*/ //Must delete after 1st project update
 
     // 3. SORTING LOGIC
     const sortedResults = useMemo(() => {
