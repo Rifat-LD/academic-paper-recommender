@@ -1,37 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import SearchSection from '../components/features/SearchSection';
 import ResultsList from '../components/features/ResultsList';
-//import { searchService, UIPaper } from '../api/papers';
-
-interface Paper { //Must delete after 1st project update
-    id: number;
-    title: string;
-    authors: string;
-    year: number;
-    abstract: string;
-    relevanceScore: number;
-}
+import { searchService, UIPaper } from '../api/papers';
 
 // 1. CONSTANTS
 const ITEMS_PER_PAGE = 6; // Shows 2 rows of 3 on desktop
 
-const mockResults: Paper[] = [ //Must delete after 1st project update
-    // ... (Keep your existing mock data here - duplicate the entries to test pagination if you want!)
-    { id: 1, title: 'Deep Learning Approaches...', authors: 'Zhang, L.', year: 2023, abstract: 'This is abstract section', relevanceScore: 100 },
-    { id: 2, title: 'Transformer Models...', authors: 'Patel, R.', year: 2024, abstract: 'This is abstract section', relevanceScore: 92 },
-    { id: 3, title: 'Reinforcement Learning...', authors: 'Thompson, K.', year: 2023, abstract: 'This is abstract section', relevanceScore: 100 },
-    { id: 4, title: 'Federated Learning...', authors: 'Williams, D.', year: 2024, abstract: '...', relevanceScore: 87 },
-    { id: 5, title: 'Explainable AI...', authors: 'Martinez, C.', year: 2023, abstract: '...', relevanceScore: 85 },
-    { id: 6, title: 'Transfer Learning...', authors: 'Nguyen, H.', year: 2024, abstract: '...', relevanceScore: 82 },
-    // Adding duplicates just to demonstrate pagination works
-    { id: 7, title: 'Quantum Computing in AI', authors: 'Schrödinger, E.', year: 2023, abstract: 'Exploring quantum states...', relevanceScore: 81 },
-    { id: 8, title: 'Ethical AI Frameworks', authors: 'Good, T.', year: 2022, abstract: 'Defining morality in code...', relevanceScore: 78 },
-];
 
 export default function SearchPage() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [results, setResults] = useState<Paper[]>([]); //Must delete after 1st project update
-    //const [results, setResults] = useState<UIPaper[]>([]);
+    const [results, setResults] = useState<UIPaper[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<string>('Relevance');
 
@@ -49,41 +27,6 @@ export default function SearchPage() {
     };
 
     const handleSearch = async (query: string) => {
-        setError(null);
-        if (!validateQuery(query)) return;
-
-        setIsLoading(true);
-        // Reset to page 1 on new search
-        setCurrentPage(1);
-
-        try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            if (query.toLowerCase().includes("error")) throw new Error("Simulated failure");
-
-            // Mock filtering
-            const filtered = mockResults.filter(p =>
-                p.title.toLowerCase().includes(query.toLowerCase()) ||
-                // Allow "all" query to show pagination
-                query === "all"
-            );
-
-            // If "all", show everything to test pagination
-            if (query === "all") {
-                setResults(mockResults);
-            } else {
-                setResults(filtered);
-            }
-
-        } catch (err) {
-            setError("Failed to fetch results.");
-            setResults([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    /*const handleSearch = async (query: string) => {
         setError(null);
         if (!validateQuery(query)) return;
 
@@ -109,7 +52,6 @@ export default function SearchPage() {
         } finally {
             setIsLoading(false);
         }
-    };*/ //Must delete after 1st project update
 
     // 3. SORTING LOGIC
     const sortedResults = useMemo(() => {
