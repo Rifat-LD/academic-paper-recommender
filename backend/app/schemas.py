@@ -60,7 +60,13 @@ class SearchResponse(BaseModel):
 class SystemResources(BaseModel):
     cpu_percent: float
     memory_percent: float
+    memory_total_gb: float
     memory_available_gb: float
+    # NEW: Storage monitoring
+    disk_percent: float
+    disk_free_gb: float
+    # NEW: Network status
+    network_online: bool
 
 class HealthResponse(BaseModel):
     status: str            # "healthy", "degraded", "critical"

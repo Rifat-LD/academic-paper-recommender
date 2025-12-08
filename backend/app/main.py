@@ -1,16 +1,23 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
-from fastapi import HTTPException, Query, Depends
-from app.schemas import SearchResponse, SearchResultItem, PaperMetadata
-from app.schemas import HealthResponse, SystemResources
-from fastapi.middleware.cors import CORSMiddleware
 import time
 import logging
 import psutil
+import socket
 
-# Import our local modules
+from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+
+# Import local modules
 from app.config import get_settings
-from app.logic import engine  # The SearchEngine singleton from Phase 1
+from app.logic import engine
+# Import all required Pydantic models
+from app.schemas import (
+    SearchResponse,
+    SearchResultItem,
+    PaperMetadata,
+    HealthResponse,
+    SystemResources
+)
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +26,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ---------------------------------------------------------
-# LIFESPAN MANAGER (Phase 2.1.1 - AI Dependency Injection)
+# LIFESPAN MANAGER
 # ---------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,7 +38,6 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Application...")
     logger.info(f"🌍 Environment: {settings.APP_ENV}")
 
-    # Initialize the Search Engine (Phase 1 Logic)
     try:
         engine.initialize()
         logger.info("✅ AI Engine initialized successfully.")
@@ -52,7 +58,7 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------
-# MIDDLEWARE (Phase 2.1.1 - CORS & Logging)
+# MIDDLEWARE
 # ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
@@ -75,7 +81,19 @@ async def log_requests(request: Request, call_next):
     return response
 
 # ---------------------------------------------------------
-# BASE ROUTES
+# HELPER FUNCTIONS
+# ---------------------------------------------------------
+def check_internet(host="8.8.8.8", port=53, timeout=1):
+    """Simple check to see if we have internet access."""
+    try:
+        socket.setdefaulttimeout(timeout)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+        return True
+    except Exception:
+        return False
+
+# ---------------------------------------------------------
+# API ENDPOINTS
 # ---------------------------------------------------------
 @app.get("/")
 async def root():
@@ -86,9 +104,62 @@ async def root():
         "ai_status": "ready" if engine.is_ready else "loading_or_failed"
     }
 
-# ---------------------------------------------------------
-# API ENDPOINTS
-# ---------------------------------------------------------
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """
+    Comprehensive System Health Check.
+    Monitors AI readiness and Server Resources (CPU/RAM/Disk/Network).
+    """
+    # 1. Gather System Metrics
+    cpu_usage = psutil.cpu_percent(interval=None)
+    memory = psutil.virtual_memory()
+
+    # Storage monitoring
+    disk = psutil.disk_usage('.')
+
+    # Network monitoring
+    is_online = check_internet()
+
+    # 2. Determine AI Status
+    ai_status = "ready" if engine.is_ready else "loading_or_failed"
+
+    # 3. Alert Logic
+    alerts = []
+    status = "healthy"
+
+    if not engine.is_ready:
+        status = "degraded"
+        alerts.append("AI Engine is not ready.")
+
+    if cpu_usage > 90:
+        status = "critical"
+        alerts.append("Critical CPU load detected (>90%)")
+
+    if memory.percent > 90:
+        status = "critical"
+        alerts.append("Critical Memory usage detected (>90%)")
+
+    if disk.free < (1024 * 1024 * 1024): # Less than 1GB free
+        status = "degraded"
+        alerts.append("Low Disk Space (<1GB)")
+
+    # 4. Return Data
+    return HealthResponse(
+        status=status,
+        version=settings.VERSION,
+        ai_engine_status=ai_status,
+        system=SystemResources(
+            cpu_percent=cpu_usage,
+            memory_percent=memory.percent,
+            memory_total_gb=round(memory.total / (1024**3), 2),
+            memory_available_gb=round(memory.available / (1024**3), 2),
+            disk_percent=disk.percent,
+            disk_free_gb=round(disk.free / (1024**3), 2),
+            network_online=is_online
+        ),
+        alerts=alerts
+    )
+
 @app.get("/recommend", response_model=SearchResponse)
 async def recommend_papers(
         q: str = Query(..., min_length=3, max_length=300, description="Search query"),
@@ -96,11 +167,7 @@ async def recommend_papers(
 ):
     """
     Semantic Search Endpoint.
-    1. Validates query.
-    2. Runs vector search via the AI Engine.
-    3. Returns ranked papers with explanations.
     """
-
     # 1. Check AI Engine Status
     if not engine.is_ready:
         raise HTTPException(
@@ -109,22 +176,19 @@ async def recommend_papers(
         )
 
     try:
-        # 2. Perform Search (Phase 1 Logic)
+        # 2. Perform Search
         search_output = engine.search(q, top_k=limit)
 
-        # 3. Format Response (Phase 2.1.2)
+        # 3. Format Response
         formatted_results = []
 
         for item in search_output['results']:
             paper_data = item['paper']
             score = item['score']
 
-            # Create a simple explanation based on score
-            # (In a future phase, this could be generative text)
             confidence = int(score * 100)
             explanation = f"This paper is a {confidence}% semantic match to your query context."
 
-            # Map raw dict to Pydantic Model
             paper_model = PaperMetadata(
                 arxiv_id=paper_data.get('arxiv_id', 'unknown'),
                 title=paper_data.get('title', 'Untitled'),
@@ -149,57 +213,3 @@ async def recommend_papers(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error during search processing")
-
-# ---------------------------------------------------------
-# SYSTEM HEALTH (Phase 2.1.3)
-# ---------------------------------------------------------
-@app.get("/health", response_model=HealthResponse)
-async def health_check():
-    """
-    Comprehensive System Health Check.
-    Monitors AI readiness and Server Resources (CPU/RAM).
-    """
-
-    # 1. Gather System Metrics
-    cpu_usage = psutil.cpu_percent(interval=None) # Non-blocking
-    memory = psutil.virtual_memory()
-    memory_gb = round(memory.available / (1024 ** 3), 2)
-
-    # 2. Determine AI Status
-    ai_status = "ready" if engine.is_ready else "loading_or_failed"
-
-    # 3. Alerting Logic (Thresholds)
-    alerts = []
-    status = "healthy"
-
-    # Critical Check: AI Engine failure
-    if not engine.is_ready:
-        status = "degraded" # API works, but Search won't
-        alerts.append("AI Engine is not ready.")
-
-    # Resource Checks
-    if cpu_usage > 90:
-        status = "critical"
-        alerts.append("Critical CPU load detected (>90%)")
-    elif cpu_usage > 70:
-        status = "degraded" if status != "critical" else "critical"
-        alerts.append("High CPU load detected (>70%)")
-
-    if memory.percent > 90:
-        status = "critical"
-        alerts.append("Critical Memory usage detected (>90%)")
-    elif memory.percent > 80:
-        status = "degraded" if status != "critical" else "critical"
-        alerts.append("High Memory usage detected (>80%)")
-
-    return HealthResponse(
-        status=status,
-        version=settings.VERSION,
-        ai_engine_status=ai_status,
-        system=SystemResources(
-            cpu_percent=cpu_usage,
-            memory_percent=memory.percent,
-            memory_available_gb=memory_gb
-        ),
-        alerts=alerts
-    )
