@@ -52,6 +52,7 @@ export default function SearchPage() {
         } finally {
             setIsLoading(false);
         }
+    };
 
     // 3. SORTING LOGIC
     const sortedResults = useMemo(() => {

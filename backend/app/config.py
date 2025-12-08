@@ -11,9 +11,12 @@ class Settings(BaseSettings):
 
     # CORS Configuration (Phase 2.1.1 - Security)
     # Allows the React frontend to communicate with this backend
+    # CORS Configuration
     CORS_ORIGINS: List[str] = [
-        "http://localhost:5173",  # Vite Local Dev
-        "http://127.0.0.1:5173"
+        "http://localhost:5173",  # Standard Vite
+        "http://localhost:5174",  # Fallback Vite port
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
     ]
 
     # AI Configuration
