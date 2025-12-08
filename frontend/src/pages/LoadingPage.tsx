@@ -2,6 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {Brain, CheckCircle2, Server, Database} from 'lucide-react';
 import apiClient from '../api/client';
 import {useNavigate} from 'react-router-dom';
+import ResourceMonitor, { SystemResources } from "../components/features/ResourceMonitor";
 
 export default function LoadingPage() {
     const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function LoadingPage() {
     const [statusMessage, setStatusMessage] = useState<string>("Initializing System...");
     const [eta, setEta] = useState<number>(15);
     const [details, setDetails] = useState<string>("Connecting to backend...");
+    const [systemStats, setSystemStats] = useState<SystemResources | null>(null);
     // Phase 2.1.3: Dynamic Status Messages based on operation phase
     useEffect(() => {
         const timer = setInterval(() => {
@@ -52,6 +54,9 @@ export default function LoadingPage() {
         const healthCheck = setInterval(async () => {
             try {
                 const response = await apiClient.get('/health');
+                if (response.data.system) {
+                    setSystemStats(response.data.system);
+                }
                 // If AI is ready, jump to 100% and redirect
                 if (response.data.ai_engine_status === 'ready') {
                     setProgress(100);
@@ -128,23 +133,12 @@ export default function LoadingPage() {
                     <span>Est. Time: {Math.ceil(eta)}s</span>
                 </div>
 
-                {/* System Stats Icons (Visual Flair) */}
-                <div className="flex justify-center gap-8 mt-12 opacity-50">
-                    <div
-                        className={`flex flex-col items-center gap-2 ${progress > 30 ? 'text-success' : 'text-gray-400'}`}>
-                        <Server size={20}/>
-                        <span className="text-xs">Server</span>
-                    </div>
-                    <div
-                        className={`flex flex-col items-center gap-2 ${progress > 60 ? 'text-success' : 'text-gray-400'}`}>
-                        <Database size={20}/>
-                        <span className="text-xs">Data</span>
-                    </div>
-                    <div
-                        className={`flex flex-col items-center gap-2 ${progress > 90 ? 'text-success' : 'text-gray-400'}`}>
-                        <CheckCircle2 size={20}/>
-                        <span className="text-xs">Ready</span>
-                    </div>
+                {/*Live Resource Monitoring */}
+                <div className="w-full mt-8">
+                    <ResourceMonitor
+                        resources={systemStats}
+                        isLoading={!systemStats}
+                    />
                 </div>
             </div>
         </div>
