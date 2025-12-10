@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
     return (
@@ -14,7 +15,17 @@ const Footer: React.FC = () => {
                         A semantic search system for academic papers that works offline and respects your privacy. Built with 🩵 for university students and researchers.
                     </p>
 
-                    <div className="flex justify-center gap-5 mb-4">
+                    <div className="flex justify-center gap-5 mb-4 flex-wrap">
+                        {/* NEW: System Status Link using your exact styling */}
+                        <Link
+                            to="/loading"
+                            state={{ viewOnly: true }} // <--- ADD THIS LINE
+                            className="text-white opacity-80 no-underline hover:opacity-100 hover:underline transition-opacity"
+                        >
+                            System Status
+                        </Link>
+
+                        {/* Existing Links */}
                         <a href="#" className="text-white opacity-80 no-underline hover:opacity-100 hover:underline transition-opacity">About</a>
                         <a href="#" className="text-white opacity-80 no-underline hover:opacity-100 hover:underline transition-opacity">Documentation</a>
                         <a href="#" className="text-white opacity-80 no-underline hover:opacity-100 hover:underline transition-opacity">GitHub</a>
