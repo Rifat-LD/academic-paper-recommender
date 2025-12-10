@@ -9,6 +9,7 @@ import Footer from './components/layout/Footer';
 // Pages
 import SearchPage from './pages/SearchPage';
 import LoadingPage from './pages/LoadingPage';
+import ErrorPage from './pages/ErrorPage';
 
 function App() {
     const navigate = useNavigate();
@@ -61,7 +62,9 @@ function App() {
                 <Routes>
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/loading" element={<LoadingPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="/error" element={<ErrorPage type="500" />} />
+                    <Route path="/network-error" element={<ErrorPage type="network" />} />
+                    <Route path="*" element={<ErrorPage type="404" />} />
                 </Routes>
             </main>
 
