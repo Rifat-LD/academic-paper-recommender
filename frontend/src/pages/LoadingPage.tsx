@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, ArrowLeft } from 'lucide-react'; // Added ArrowLeft
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Brain, ArrowLeft, XCircle, AlertTriangle } from 'lucide-react';
 import apiClient from '../api/client';
-import { useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import ResourceMonitor, { SystemResources } from "../components/features/ResourceMonitor";
+import LoadingTips from '../components/ui/LoadingTips';
 
 export default function LoadingPage() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Check if user came here manually (via Footer)
+    // Check if user came here manually (via Footer/Menu)
     const isViewOnly = location.state?.viewOnly || false;
 
     // UI States
@@ -21,6 +22,21 @@ export default function LoadingPage() {
     const [systemStats, setSystemStats] = useState<SystemResources | null>(null);
     const [connectionAttempts, setConnectionAttempts] = useState(0);
     const [isBackendDown, setIsBackendDown] = useState(false);
+
+    // Phase 2.2.3 Control States
+    const [isCancelled, setIsCancelled] = useState(false);
+    const [showLongOpWarning, setShowLongOpWarning] = useState(false);
+
+    // Refs for graceful termination (Better than intervals in state)
+    const progressTimerRef = useRef<number | null>(null);
+    const pollTimerRef = useRef<number | null>(null);
+    const startTimeRef = useRef<number>(Date.now());
+
+    // Cleanup helper
+    const stopOperations = () => {
+        if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+        if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
 
     const checkBackend = useCallback(async () => {
         try {
@@ -37,15 +53,14 @@ export default function LoadingPage() {
                 setProgress(100);
 
                 if (isViewOnly) {
-                    // MODE A: VIEW ONLY (Dashboard Mode)
-                    // Do NOT redirect. Just show "Ready".
+                    // MODE A: VIEW ONLY
                     setStatusMessage("System Operational");
                     setDetails("Live monitoring active");
                 } else {
-                    // MODE B: STARTUP (Loading Mode)
-                    // Redirect as normal
+                    // MODE B: STARTUP
                     setStatusMessage("System Ready");
                     setDetails("Redirecting to search...");
+                    stopOperations(); // Stop polling immediately
                     setTimeout(() => navigate('/'), 800);
                 }
                 return true;
@@ -57,42 +72,45 @@ export default function LoadingPage() {
         }
     }, [navigate, isViewOnly]);
 
-    // Effect 1: Progress Bar Animation
+    // Effect 1: Progress Bar Animation & Warnings
     useEffect(() => {
-        if (isBackendDown) return;
+        if (isBackendDown || isCancelled) return;
 
-        // If in ViewOnly mode, just jump to 100% immediately (no fake loading)
         if (isViewOnly) {
             setProgress(100);
             return;
         }
 
-        const timer = setInterval(() => {
+        progressTimerRef.current = window.setInterval(() => {
             setProgress((oldProgress) => {
                 if (oldProgress >= 100) {
-                    clearInterval(timer);
+                    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
                     return 100;
                 }
                 if (connectionAttempts > 2 && oldProgress > 80) return oldProgress;
 
+                // Phase 2.2.3: Long Operation Warning
+                const elapsed = (Date.now() - startTimeRef.current) / 1000;
+                if (elapsed > 15 && oldProgress < 50) {
+                    setShowLongOpWarning(true);
+                }
+
                 const increment = Math.random() * 5;
                 const newProgress = Math.min(oldProgress + increment, 99);
 
-                // Only update text if NOT in view mode
-                if (!isViewOnly) {
-                    if (newProgress < 30) {
-                        setStatusMessage("Loading AI Models...");
-                        setDetails("Initializing PyTorch & SentenceTransformers");
-                    } else if (newProgress < 60) {
-                        setStatusMessage("Verifying Dataset...");
-                        setDetails("Checking integrity of 1,000 papers");
-                    } else if (newProgress < 80) {
-                        setStatusMessage("Warming up Vector Index...");
-                        setDetails("Optimizing FAISS/Numpy matrix operations");
-                    } else {
-                        setStatusMessage("Finalizing Setup...");
-                        setDetails("Waiting for secure connection response...");
-                    }
+                // Status text updates
+                if (newProgress < 30) {
+                    setStatusMessage("Loading AI Models...");
+                    setDetails("Initializing PyTorch & SentenceTransformers");
+                } else if (newProgress < 60) {
+                    setStatusMessage("Verifying Dataset...");
+                    setDetails("Checking integrity of 1,000 papers");
+                } else if (newProgress < 80) {
+                    setStatusMessage("Warming up Vector Index...");
+                    setDetails("Optimizing FAISS/Numpy matrix operations");
+                } else {
+                    setStatusMessage("Finalizing Setup...");
+                    setDetails("Waiting for secure connection response...");
                 }
 
                 setEta((prev) => Math.max(0, prev - 0.5));
@@ -100,21 +118,26 @@ export default function LoadingPage() {
             });
         }, 500);
 
-        return () => clearInterval(timer);
-    }, [connectionAttempts, isBackendDown, isViewOnly]);
+        return () => {
+            if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+        };
+    }, [connectionAttempts, isBackendDown, isViewOnly, isCancelled]);
 
     // Effect 2: Polling Logic
     useEffect(() => {
+        if (isCancelled) return;
+
         // Run immediately on mount
         checkBackend();
 
-        const poller = setInterval(async () => {
-            if (isBackendDown) return;
+        pollTimerRef.current = window.setInterval(async () => {
+            if (isBackendDown || isCancelled) return;
 
             const isReady = await checkBackend();
-            // If strictly loading, stop polling once ready.
-            // If ViewOnly, KEEP polling forever (to update graphs).
-            if (isReady && !isViewOnly) clearInterval(poller);
+            // Stop polling if ready AND we are in loading mode
+            if (isReady && !isViewOnly) {
+                if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            }
 
             if (connectionAttempts > 5) {
                 setIsBackendDown(true);
@@ -123,15 +146,62 @@ export default function LoadingPage() {
             }
         }, 2000);
 
-        return () => clearInterval(poller);
-    }, [checkBackend, connectionAttempts, isBackendDown, isViewOnly]);
+        return () => {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+        };
+    }, [checkBackend, connectionAttempts, isBackendDown, isViewOnly, isCancelled]);
 
+    // Handlers
     const handleRetry = () => {
         setConnectionAttempts(0);
         setIsBackendDown(false);
         setDetails("Retrying connection...");
         checkBackend();
     };
+
+    // Phase 2.2.3 Handlers
+    const handleCancel = () => {
+        stopOperations();
+        setIsCancelled(true);
+        setStatusMessage("Setup Cancelled");
+    };
+
+    const handleManualRetry = () => {
+        window.location.reload();
+    };
+
+    const handleSkip = () => {
+        navigate('/');
+    };
+
+    // RENDER: CANCELLED STATE
+    if (isCancelled) {
+        return (
+            <div className="min-h-screen bg-light dark:bg-dark-bg flex flex-col items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h1 className="text-2xl font-bold text-dark dark:text-white mb-2">Setup Cancelled</h1>
+                    <p className="text-gray-500 mb-8">
+                        The initialization process was stopped. The AI engine might not be ready if you continue.
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                        <button
+                            onClick={handleManualRetry}
+                            className="bg-primary hover:bg-secondary text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                        >
+                            Retry Setup
+                        </button>
+                        <button
+                            onClick={handleSkip}
+                            className="text-gray-500 hover:text-dark dark:hover:text-white px-6 py-2 font-medium"
+                        >
+                            Continue Anyway
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-light dark:bg-dark-bg flex flex-col items-center justify-center p-4 transition-colors duration-300 relative">
@@ -162,6 +232,14 @@ export default function LoadingPage() {
                     {details}
                 </p>
 
+                {/* Phase 2.2.3: Warning Message (Only during active loading) */}
+                {showLongOpWarning && !isViewOnly && !isBackendDown && (
+                    <div className="flex items-center justify-center gap-2 text-yellow-600 dark:text-yellow-500 text-sm mb-4 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-md animate-fade-in">
+                        <AlertTriangle size={16} />
+                        <span>This is taking longer than usual...</span>
+                    </div>
+                )}
+
                 {/* Progress Bar (Hidden if viewing Dashboard) */}
                 {!isViewOnly && (
                     <div className="relative pt-1 mb-2">
@@ -187,18 +265,35 @@ export default function LoadingPage() {
                                 }`}
                             ></div>
                         </div>
+                        <div className="text-right text-xs text-gray-400">
+                            Est. Time: {Math.ceil(eta)}s
+                        </div>
                     </div>
                 )}
 
+                {/* Phase 2.2.3: Tips Section (Only during active loading) */}
+                {!isViewOnly && !isBackendDown && <LoadingTips />}
+
                 {/* Resource Monitor */}
-                <div className="w-full mt-8">
+                <div className="w-full mt-8 mb-6">
                     <ResourceMonitor
                         resources={systemStats}
                         isLoading={!systemStats && !isBackendDown}
+                        // @ts-ignore
                         isError={isBackendDown}
                         onRetry={handleRetry}
                     />
                 </div>
+
+                {/* Phase 2.2.3: Cancel Button (Only in Loading Mode) */}
+                {!isViewOnly && !isBackendDown && (
+                    <button
+                        onClick={handleCancel}
+                        className="text-gray-400 hover:text-red-500 transition-colors text-sm font-medium flex items-center gap-1 mx-auto"
+                    >
+                        <XCircle size={14} /> Cancel Setup
+                    </button>
+                )}
             </div>
         </div>
     );
