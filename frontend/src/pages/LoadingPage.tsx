@@ -23,25 +23,27 @@ export default function LoadingPage() {
     const [connectionAttempts, setConnectionAttempts] = useState(0);
     const [isBackendDown, setIsBackendDown] = useState(false);
 
-    // Phase 2.2.3 Control States
+    // Control States
     const [isCancelled, setIsCancelled] = useState(false);
     const [showLongOpWarning, setShowLongOpWarning] = useState(false);
 
-    // Refs for graceful termination (Better than intervals in state)
+    // Refs
     const progressTimerRef = useRef<number | null>(null);
     const pollTimerRef = useRef<number | null>(null);
     const startTimeRef = useRef<number>(Date.now());
 
     // Cleanup helper
-    const stopOperations = () => {
+    const stopOperations = useCallback(() => {
         if (progressTimerRef.current) clearInterval(progressTimerRef.current);
         if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
+    }, []);
 
     const checkBackend = useCallback(async () => {
         try {
-            const response = await apiClient.get('/health');
+            // Short timeout for health check so we fail fast if server is down
+            const response = await apiClient.get('/health', { timeout: 2000 });
 
+            // SUCCESS
             setIsBackendDown(false);
             setConnectionAttempts(0);
 
@@ -53,52 +55,60 @@ export default function LoadingPage() {
                 setProgress(100);
 
                 if (isViewOnly) {
-                    // MODE A: VIEW ONLY
                     setStatusMessage("System Operational");
                     setDetails("Live monitoring active");
                 } else {
-                    // MODE B: STARTUP
                     setStatusMessage("System Ready");
                     setDetails("Redirecting to search...");
-                    stopOperations(); // Stop polling immediately
+                    stopOperations();
                     setTimeout(() => navigate('/'), 800);
                 }
                 return true;
             }
             return false;
         } catch (error) {
-            setConnectionAttempts(prev => prev + 1);
+            // FAILURE LOGIC (Fixed)
+            setConnectionAttempts(prev => {
+                const newCount = prev + 1;
+                // If we failed 3 times in a row, declare backend down immediately
+                if (newCount >= 3) {
+                    setIsBackendDown(true);
+                    setStatusMessage("Connection Failed");
+                    setDetails("Backend server is unreachable.");
+                }
+                return newCount;
+            });
             return false;
         }
-    }, [navigate, isViewOnly]);
+    }, [navigate, isViewOnly, stopOperations]);
 
-    // Effect 1: Progress Bar Animation & Warnings
+    // Effect 1: Progress Bar Animation
     useEffect(() => {
-        if (isBackendDown || isCancelled) return;
-
-        if (isViewOnly) {
-            setProgress(100);
-            return;
-        }
+        if (isBackendDown || isCancelled || isViewOnly) return;
 
         progressTimerRef.current = window.setInterval(() => {
             setProgress((oldProgress) => {
                 if (oldProgress >= 100) {
-                    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+                    stopOperations();
                     return 100;
                 }
-                if (connectionAttempts > 2 && oldProgress > 80) return oldProgress;
 
-                // Phase 2.2.3: Long Operation Warning
+                // If we are struggling to connect, PAUSE progress at 80%
+                // This explains your screenshot (stuck at 83%)
+                if (connectionAttempts > 0 && oldProgress > 80) {
+                    return oldProgress;
+                }
+
+                // Long Op Warning
                 const elapsed = (Date.now() - startTimeRef.current) / 1000;
-                if (elapsed > 15 && oldProgress < 50) {
+                if (elapsed > 10 && oldProgress < 50) {
                     setShowLongOpWarning(true);
                 }
 
                 const increment = Math.random() * 5;
                 const newProgress = Math.min(oldProgress + increment, 99);
 
-                // Status text updates
+                // Update text based on progress
                 if (newProgress < 30) {
                     setStatusMessage("Loading AI Models...");
                     setDetails("Initializing PyTorch & SentenceTransformers");
@@ -121,35 +131,33 @@ export default function LoadingPage() {
         return () => {
             if (progressTimerRef.current) clearInterval(progressTimerRef.current);
         };
-    }, [connectionAttempts, isBackendDown, isViewOnly, isCancelled]);
+    }, [connectionAttempts, isBackendDown, isCancelled, isViewOnly, stopOperations]);
 
     // Effect 2: Polling Logic
     useEffect(() => {
         if (isCancelled) return;
 
-        // Run immediately on mount
+        // Run once immediately
         checkBackend();
 
         pollTimerRef.current = window.setInterval(async () => {
-            if (isBackendDown || isCancelled) return;
+            if (isCancelled) return;
+
+            // If backend is marked down, stop polling to save resources
+            // Unless the user clicks Retry (which resets isBackendDown)
+            if (isBackendDown) return;
 
             const isReady = await checkBackend();
-            // Stop polling if ready AND we are in loading mode
-            if (isReady && !isViewOnly) {
-                if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-            }
 
-            if (connectionAttempts > 5) {
-                setIsBackendDown(true);
-                setStatusMessage("Connection Failed");
-                setDetails("Backend server is unreachable.");
+            if (isReady && !isViewOnly) {
+                stopOperations();
             }
         }, 2000);
 
         return () => {
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
         };
-    }, [checkBackend, connectionAttempts, isBackendDown, isViewOnly, isCancelled]);
+    }, [checkBackend, isCancelled, isBackendDown, isViewOnly, stopOperations]);
 
     // Handlers
     const handleRetry = () => {
@@ -159,7 +167,6 @@ export default function LoadingPage() {
         checkBackend();
     };
 
-    // Phase 2.2.3 Handlers
     const handleCancel = () => {
         stopOperations();
         setIsCancelled(true);
@@ -191,12 +198,6 @@ export default function LoadingPage() {
                         >
                             Retry Setup
                         </button>
-                        <button
-                            onClick={handleSkip}
-                            className="text-gray-500 hover:text-dark dark:hover:text-white px-6 py-2 font-medium"
-                        >
-                            Continue Anyway
-                        </button>
                     </div>
                 </div>
             </div>
@@ -206,7 +207,6 @@ export default function LoadingPage() {
     return (
         <div className="min-h-screen bg-light dark:bg-dark-bg flex flex-col items-center justify-center p-4 transition-colors duration-300 relative">
 
-            {/* BACK BUTTON (Only for ViewOnly Mode) */}
             {isViewOnly && (
                 <button
                     onClick={() => navigate('/')}
@@ -216,7 +216,7 @@ export default function LoadingPage() {
                 </button>
             )}
 
-            {/* Brain Spinner */}
+            {/* Brain Spinner - RED if down */}
             <div className="relative mb-8">
                 <div className={`absolute inset-0 rounded-full ${isBackendDown ? 'bg-red-500/20' : 'bg-primary/20 animate-ping'}`}></div>
                 <div className="relative bg-white dark:bg-dark-surface p-6 rounded-full shadow-xl border border-gray-100 dark:border-gray-700">
@@ -232,7 +232,6 @@ export default function LoadingPage() {
                     {details}
                 </p>
 
-                {/* Phase 2.2.3: Warning Message (Only during active loading) */}
                 {showLongOpWarning && !isViewOnly && !isBackendDown && (
                     <div className="flex items-center justify-center gap-2 text-yellow-600 dark:text-yellow-500 text-sm mb-4 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-md animate-fade-in">
                         <AlertTriangle size={16} />
@@ -240,7 +239,7 @@ export default function LoadingPage() {
                     </div>
                 )}
 
-                {/* Progress Bar (Hidden if viewing Dashboard) */}
+                {/* Progress Bar (Hidden if ViewOnly) */}
                 {!isViewOnly && (
                     <div className="relative pt-1 mb-2">
                         <div className="flex mb-2 items-center justify-between">
@@ -265,16 +264,13 @@ export default function LoadingPage() {
                                 }`}
                             ></div>
                         </div>
-                        <div className="text-right text-xs text-gray-400">
-                            Est. Time: {Math.ceil(eta)}s
-                        </div>
                     </div>
                 )}
 
-                {/* Phase 2.2.3: Tips Section (Only during active loading) */}
+                {/* TIPS - Hide if Backend Down */}
                 {!isViewOnly && !isBackendDown && <LoadingTips />}
 
-                {/* Resource Monitor */}
+                {/* Resource Monitor - Pass isError={true} if down */}
                 <div className="w-full mt-8 mb-6">
                     <ResourceMonitor
                         resources={systemStats}
@@ -285,7 +281,7 @@ export default function LoadingPage() {
                     />
                 </div>
 
-                {/* Phase 2.2.3: Cancel Button (Only in Loading Mode) */}
+                {/* Cancel Button - Hide if Backend Down */}
                 {!isViewOnly && !isBackendDown && (
                     <button
                         onClick={handleCancel}
