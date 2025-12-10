@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom'; // Import Routing Tools
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import apiClient from './api/client'; // Import API client
 
 // Components
 import Header from './components/layout/Header';
@@ -7,9 +8,12 @@ import Footer from './components/layout/Footer';
 
 // Pages
 import SearchPage from './pages/SearchPage';
-import LoadingPage from './pages/LoadingPage'; // Import the new page
+import LoadingPage from './pages/LoadingPage';
 
 function App() {
+    const navigate = useNavigate();
+    const location = useLocation();
+
     // --- Theme Logic (Preserved) ---
     const [isDark, setIsDark] = useState(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -24,22 +28,39 @@ function App() {
 
     const toggleTheme = () => setIsDark(prev => !prev);
 
+    // --- PHASE 2.2: AUTOMATIC LOADING REDIRECT ---
+    useEffect(() => {
+        const checkSystemHealth = async () => {
+            // If we are already on the loading page, don't check (let the page handle itself)
+            if (location.pathname === '/loading') return;
+
+            try {
+                const response = await apiClient.get('/health');
+
+                // If AI is NOT ready, force user to the loading screen
+                if (response.data.ai_engine_status !== 'ready') {
+                    console.log("⚠️ AI Engine loading... Redirecting to initialization screen.");
+                    navigate('/loading');
+                }
+            } catch (error) {
+                // If backend is down completely, also go to loading (or error) page
+                console.error("❌ Backend offline or unreachable");
+                navigate('/loading');
+            }
+        };
+
+        checkSystemHealth();
+    }, []); // Empty dependency array = runs once on app mount
+
     return (
-        // Global Layout Wrapper (Preserved)
         <div className={`${isDark ? 'dark' : ''} flex flex-col min-h-screen font-sans bg-light text-dark dark:bg-dark-bg dark:text-light transition-colors duration-300`}>
 
             <Header isDark={isDark} toggleTheme={toggleTheme} />
 
-            {/* Main Content Area: Now dynamic based on URL */}
             <main className="flex-grow">
                 <Routes>
-                    {/* Phase 1: Search Page */}
                     <Route path="/" element={<SearchPage />} />
-
-                    {/* Phase 2.2: Loading / System Status Page */}
                     <Route path="/loading" element={<LoadingPage />} />
-
-                    {/* Fallback: Redirect unknown URLs to Home */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </main>

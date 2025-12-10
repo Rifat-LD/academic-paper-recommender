@@ -1,7 +1,6 @@
 import React from 'react';
-import { Cpu, HardDrive, Wifi, WifiOff, AlertTriangle, Database } from 'lucide-react';
+import { Cpu, HardDrive, Wifi, WifiOff, AlertTriangle, Database, ServerCrash } from 'lucide-react';
 
-// Define strict types matching Backend Schema
 export interface SystemResources {
     cpu_percent: number;
     memory_percent: number;
@@ -15,15 +14,13 @@ export interface SystemResources {
 interface ResourceMonitorProps {
     resources: SystemResources | null;
     isLoading: boolean;
+    isError?: boolean; // NEW PROP
+    onRetry?: () => void; // NEW PROP
 }
 
 const ProgressBar: React.FC<{ value: number; label: string; icon: React.ReactNode; colorClass?: string }> = ({
-                                                                                                                 value,
-                                                                                                                 label,
-                                                                                                                 icon,
-                                                                                                                 colorClass
+                                                                                                                 value, label, icon, colorClass
                                                                                                              }) => {
-    // Dynamic warning colors
     let finalColor = colorClass || "bg-primary";
     let textColor = "text-gray-600 dark:text-gray-400";
 
@@ -43,54 +40,63 @@ const ProgressBar: React.FC<{ value: number; label: string; icon: React.ReactNod
                 <span className={textColor}>{value}%</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                <div
-                    className={`h-full rounded-full transition-all duration-500 ${finalColor}`}
-                    style={{ width: `${value}%` }}
-                ></div>
+                <div className={`h-full rounded-full transition-all duration-500 ${finalColor}`} style={{ width: `${value}%` }}></div>
             </div>
         </div>
     );
 };
 
-export default function ResourceMonitor({ resources, isLoading }: ResourceMonitorProps) {
+export default function ResourceMonitor({ resources, isLoading, isError, onRetry }: ResourceMonitorProps) {
+    // 1. ERROR STATE (Backend Down)
+    if (isError) {
+        return (
+            <div className="bg-red-50 dark:bg-red-900/10 backdrop-blur-sm rounded-xl p-6 border border-red-200 dark:border-red-800 w-full max-w-sm mx-auto mt-6 text-center">
+                <ServerCrash className="w-10 h-10 text-red-500 mx-auto mb-3" />
+                <h3 className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">
+                    System Unavailable
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                    Cannot connect to system monitor.
+                </p>
+                {onRetry && (
+                    <button
+                        onClick={onRetry}
+                        className="text-xs bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-100 px-3 py-1.5 rounded transition-colors"
+                    >
+                        Retry Connection
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    // 2. LOADING STATE (Waiting for first byte)
     if (isLoading || !resources) {
         return (
-            <div className="animate-pulse space-y-3 opacity-50">
-                <div className="h-2 bg-gray-200 rounded w-full"></div>
-                <div className="h-2 bg-gray-200 rounded w-full"></div>
+            <div className="animate-pulse space-y-3 opacity-50 w-full max-w-sm mx-auto mt-6 p-4 border border-gray-100 dark:border-gray-800 rounded-xl">
+                <div className="flex justify-between"><div className="h-2 bg-gray-300 rounded w-1/3"></div><div className="h-2 bg-gray-300 rounded w-8"></div></div>
+                <div className="h-2 bg-gray-200 rounded w-full mb-4"></div>
+
+                <div className="flex justify-between"><div className="h-2 bg-gray-300 rounded w-1/3"></div><div className="h-2 bg-gray-300 rounded w-8"></div></div>
+                <div className="h-2 bg-gray-200 rounded w-full mb-4"></div>
+
+                <div className="flex justify-between"><div className="h-2 bg-gray-300 rounded w-1/3"></div><div className="h-2 bg-gray-300 rounded w-8"></div></div>
                 <div className="h-2 bg-gray-200 rounded w-full"></div>
             </div>
         );
     }
 
+    // 3. SUCCESS STATE (Showing Stats)
     return (
         <div className="bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-gray-100 dark:border-gray-800 w-full max-w-sm mx-auto mt-6">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
                 Live Resource Monitor
             </h3>
 
-            {/* CPU Indicator */}
-            <ProgressBar
-                value={resources.cpu_percent}
-                label="CPU Usage"
-                icon={<Cpu size={14} />}
-            />
+            <ProgressBar value={resources.cpu_percent} label="CPU Usage" icon={<Cpu size={14} />} />
+            <ProgressBar value={resources.memory_percent} label={`Memory (${resources.memory_available_gb}GB free)`} icon={<Database size={14} />} />
+            <ProgressBar value={resources.disk_percent} label={`Storage (${resources.disk_free_gb}GB free)`} icon={<HardDrive size={14} />} />
 
-            {/* Memory Indicator */}
-            <ProgressBar
-                value={resources.memory_percent}
-                label={`Memory (${resources.memory_available_gb}GB free)`}
-                icon={<Database size={14} />}
-            />
-
-            {/* Storage Indicator */}
-            <ProgressBar
-                value={resources.disk_percent}
-                label={`Storage (${resources.disk_free_gb}GB free)`}
-                icon={<HardDrive size={14} />}
-            />
-
-            {/* Network Indicator */}
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                     Connection Status
@@ -105,11 +111,10 @@ export default function ResourceMonitor({ resources, isLoading }: ResourceMonito
                 </div>
             </div>
 
-            {/* Warning Section */}
             {(resources.cpu_percent > 90 || resources.memory_percent > 90) && (
                 <div className="mt-3 flex items-start gap-2 text-xs text-red-500 bg-red-50 dark:bg-red-900/10 p-2 rounded">
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                    <span>System under heavy load. AI processing may be slower than usual.</span>
+                    <span>System under heavy load. AI processing may be slower.</span>
                 </div>
             )}
         </div>
