@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Brain, Loader2 } from 'lucide-react';
+import NetworkBadge from "../ui/NetworkBadge.tsx";
 
 interface SearchSectionProps {
     onSearch: (query: string) => void;
@@ -85,9 +86,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onSearch, isSearching }) 
                         )}
                     </button>
 
-                    <span className="inline-block bg-[#ffc107] text-dark py-1 px-3 rounded-full text-sm font-semibold animate-pulse">
-                        Offline Mode
-                    </span>
+                    <NetworkBadge />
                 </div>
             </div>
 

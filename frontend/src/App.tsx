@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import apiClient from './api/client'; // Import API client
+import {useNetworkMonitoring } from "./hooks/useNetworkMonitoring.ts";
 
 // Components
 import Header from './components/layout/Header';
@@ -21,6 +22,8 @@ function App() {
         if (savedTheme) return savedTheme === 'dark';
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
+
+    useNetworkMonitoring();
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
