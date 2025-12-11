@@ -13,8 +13,8 @@ import Footer from './components/layout/Footer';
 import SearchPage from './pages/SearchPage';
 import LoadingPage from './pages/LoadingPage';
 import ErrorPage from './pages/ErrorPage';
-import OfflinePage from './pages/OfflinePage';
 import SettingsPage from './pages/SettingsPage';
+import FavoritesPage from './pages/FavoritesPage';
 
 function App() {
     const { fontSize, lineHeight } = useSettingsStore();
@@ -94,7 +94,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/loading" element={<LoadingPage />} />
-                    <Route path="/offline" element={<OfflinePage />} />
+                    <Route path="/favorites" element={<FavoritesPage />} />
                     <Route path="/settings"element={<SettingsPage />} />
                     <Route path="/error" element={<ErrorPage type="500" />} />
                     <Route path="/network-error" element={<ErrorPage type="network" />} />

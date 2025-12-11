@@ -28,7 +28,7 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
 
             {/* Card Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-xl font-bold mb-2 text-secondary dark:text-primary leading-tight line-clamp-2">
+                <h3 className="text-xl font-bold mb-2 text-secondary dark:text-primary leading-tight line-clamp-2 pr-8">
                     {paper.title}
                 </h3>
                 <div className="text-gray-500 dark:text-gray-400 text-sm mb-1.5 leading-relaxed">
