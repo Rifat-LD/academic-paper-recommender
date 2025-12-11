@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     WifiOff,
     Wifi,
@@ -26,6 +27,7 @@ const OfflinePage: React.FC = () => {
     // 1. Architecture & State Integration
     const { isOnline } = useNetworkStore();
     const { favorites } = useFavoritesStore();
+    const navigate = useNavigate()
 
     // Handler for reconnect button
     const handleReconnect = () => {
@@ -129,9 +131,9 @@ const OfflinePage: React.FC = () => {
                                 <div key={paper.id} className="relative group">
                                     <PaperCard paper={paper} />
                                     {/* Offline Indicator Badge overlay */}
-                                    <div className="absolute top-4 right-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2 py-1 rounded flex items-center gap-1 shadow-sm pointer-events-none">
+                                    {/*<div className="absolute top-4 right-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2 py-1 rounded flex items-center gap-1 shadow-sm pointer-events-none">
                                         <CheckCircle className="w-3 h-3" /> Offline Ready
-                                    </div>
+                                    </div>*/}
                                 </div>
                             ))}
                         </div>
@@ -145,7 +147,7 @@ const OfflinePage: React.FC = () => {
                 </section>
 
                 {/* 5. Preparation Section */}
-                <section className="bg-light dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-2xl p-8 mb-8 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                {/*<section className="bg-light dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-2xl p-8 mb-8 animate-fade-in" style={{ animationDelay: '0.3s' }}>
                     <div className="text-center mb-8">
                         <h2 className="text-2xl font-bold text-secondary dark:text-primary mb-3">Prepare for Offline Use</h2>
                         <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
@@ -170,10 +172,10 @@ const OfflinePage: React.FC = () => {
                             <p className="text-gray-600 dark:text-gray-400 text-sm">Allow the app to sync new papers when you're online.</p>
                         </div>
                     </div>
-                </section>
+                </section>*/}
 
                 {/* 6. Limitations Section */}
-                <section className="bg-[#fff8e1] dark:bg-[#33270d] border-l-4 border-amber-400 rounded-2xl p-8 mb-8 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                {/*<section className="bg-[#fff8e1] dark:bg-[#33270d] border-l-4 border-amber-400 rounded-2xl p-8 mb-8 animate-fade-in" style={{ animationDelay: '0.4s' }}>
                     <div className="flex items-center gap-3 mb-4">
                         <TriangleAlert className="w-6 h-6 text-amber-600 dark:text-amber-200" />
                         <h3 className="text-xl font-bold text-amber-800 dark:text-amber-100">Offline Mode Limitations</h3>
@@ -192,18 +194,23 @@ const OfflinePage: React.FC = () => {
                             <p>All your actions (searches, favorites, notes) will be saved locally and synced when you're back online.</p>
                         </div>
                     </div>
-                </section>
+                </section>*/}
 
                 {/* 7. Actions Section */}
-                <section className="text-center animate-fade-in pb-8" style={{ animationDelay: '0.5s' }}>
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <button className="inline-flex items-center justify-center gap-2 bg-gradient-to-br from-primary to-secondary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
-                            <Download className="w-5 h-5" /> Download More Papers
-                        </button>
-                        <button className="inline-flex items-center justify-center gap-2 bg-transparent border-2 border-gray-300 dark:border-gray-600 text-dark dark:text-light hover:bg-light dark:hover:bg-dark-surface px-8 py-3 rounded-full font-bold transition-all">
-                            <Settings className="w-5 h-5" /> Offline Settings
-                        </button>
-                    </div>
+                <section className="actions-section fade-in delay-5 text-center mt-12 mb-8">
+                    {/*<button
+                        onClick={() => navigate('/settings')} // Redirects to Settings (Data Management)
+                        className="action-btn btn-primary bg-primary hover:bg-secondary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-primary/40 transition-all inline-flex items-center gap-2 mx-2"
+                    >
+                        <i className="fas fa-download"></i> Manage Dataset
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/settings')} // Redirects to Settings
+                        className="action-btn btn-secondary bg-transparent border-2 border-gray-300 dark:border-gray-600 text-dark dark:text-light hover:bg-light dark:hover:bg-dark-surface px-8 py-3 rounded-full font-bold transition-all inline-flex items-center gap-2 mx-2"
+                    >
+                        <i className="fas fa-cog"></i> Offline Settings
+                    </button>*/}
                 </section>
 
             </main>

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import apiClient from './api/client'; // Import API client
 import {useNetworkMonitoring } from "./hooks/useNetworkMonitoring.ts";
-import OfflinePage from './pages/OfflinePage';
+import { useSettingsStore } from './store/settingsStore';
+
 
 // Components
 import Header from './components/layout/Header';
@@ -12,10 +13,14 @@ import Footer from './components/layout/Footer';
 import SearchPage from './pages/SearchPage';
 import LoadingPage from './pages/LoadingPage';
 import ErrorPage from './pages/ErrorPage';
+import OfflinePage from './pages/OfflinePage';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
+    const { fontSize, lineHeight } = useSettingsStore();
     const navigate = useNavigate();
     const location = useLocation();
+    const { pathname } = useLocation();
 
     // --- Theme Logic (Preserved) ---
     const [isDark, setIsDark] = useState(() => {
@@ -27,11 +32,34 @@ function App() {
     useNetworkMonitoring();
 
     useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname]);
+
+    useEffect(() => {
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
     }, [isDark]);
 
     const toggleTheme = () => setIsDark(prev => !prev);
+
+    // --- APPLY ACCESSIBILITY SETTINGS ---
+    useEffect(() => {
+        const root = document.documentElement;
+
+        // Map abstract sizes to CSS percentages
+        const sizeMap = {
+            small: '90%',   // ~14.4px
+            medium: '100%', // 16px (Default)
+            large: '115%'   // ~18.4px
+        };
+
+        // Apply Font Size to Root (Tailwind 'rem' units will scale relative to this)
+        root.style.fontSize = sizeMap[fontSize];
+
+        // Apply Line Height globally
+        document.body.style.lineHeight = lineHeight.toString();
+
+    }, [fontSize, lineHeight]);
 
     // --- PHASE 2.2: AUTOMATIC LOADING REDIRECT ---
     useEffect(() => {
@@ -67,6 +95,7 @@ function App() {
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/loading" element={<LoadingPage />} />
                     <Route path="/offline" element={<OfflinePage />} />
+                    <Route path="/settings"element={<SettingsPage />} />
                     <Route path="/error" element={<ErrorPage type="500" />} />
                     <Route path="/network-error" element={<ErrorPage type="network" />} />
                     <Route path="*" element={<ErrorPage type="404" />} />

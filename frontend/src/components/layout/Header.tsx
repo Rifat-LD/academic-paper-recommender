@@ -42,6 +42,8 @@ const Header: React.FC<HeaderProps> = ({ isDark, toggleTheme }) => {
                         {/* Favorites will be built in Phase 3, linking to Offline for now */}
                         <Link to="/offline" className={navClass('/favorites')}>Favorites</Link>
 
+                        <Link to="/settings" className={navClass('/settings')}>Settings</Link>
+
                         {/* NEW: Offline Dashboard Link */}
                         <Link to="/offline" className={`${navClass('/offline')} flex items-center gap-2 border border-white/20`}>
                             <WifiOff size={16} />

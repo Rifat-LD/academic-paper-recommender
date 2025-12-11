@@ -2,10 +2,8 @@ import React, { useState, useMemo } from 'react';
 import SearchSection from '../components/features/SearchSection';
 import ResultsList from '../components/features/ResultsList';
 import { searchService, UIPaper } from '../api/papers';
-//import OfflineManager from "../components/features/OfflineManager.tsx";
+import { useSettingsStore } from '../store/settingsStore';
 
-// 1. CONSTANTS
-const ITEMS_PER_PAGE = 6; // Shows 2 rows of 3 on desktop
 
 
 export default function SearchPage() {
@@ -14,6 +12,8 @@ export default function SearchPage() {
     const [error, setError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<string>('Relevance');
     const [lastQuery, setLastQuery] = useState<string>('');
+    const { resultDensity, minRelevance } = useSettingsStore();
+    const ITEMS_PER_PAGE = resultDensity;
 
     // 2. PAGINATION STATE
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -66,14 +66,18 @@ export default function SearchPage() {
 
     // 3. SORTING LOGIC
     const sortedResults = useMemo(() => {
-        const sortable = [...results];
+        // Step A: Filter by Min Relevance (from Settings)
+        const filtered = results.filter(paper => paper.relevanceScore >= minRelevance);
+
+        // Step B: Sort the filtered list
+        const sortable = [...filtered];
         switch (sortBy) {
             case 'Date (Newest)': return sortable.sort((a, b) => b.year - a.year);
             case 'Date (Oldest)': return sortable.sort((a, b) => a.year - b.year);
             case 'Title (A-Z)': return sortable.sort((a, b) => a.title.localeCompare(b.title));
             default: return sortable.sort((a, b) => b.relevanceScore - a.relevanceScore);
         }
-    }, [results, sortBy]);
+    }, [results, sortBy, minRelevance]);
 
     // 4. PAGINATION LOGIC
     const totalPages = Math.ceil(sortedResults.length / ITEMS_PER_PAGE);
@@ -112,34 +116,6 @@ export default function SearchPage() {
                     />
                 </div>
             </main>
-            {/*// ... inside SearchPage.tsx return statement ...
-
-            <main className="flex-grow">
-                <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <SearchSection
-                        onSearch={handleSearch}
-                        isSearching={isLoading}
-                    />
-
-                    <ResultsList
-                        papers={paginatedResults}
-                        isLoading={isLoading}
-                        error={error}
-                        totalResults={sortedResults.length}
-                        sortBy={sortBy}
-                        onSortChange={setSortBy}
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={handlePageChange}
-                    />
-
-                     TEMP: Offline Manager for Testing Phase 2.4
-                    <div className="mt-16 mb-8 border-t border-gray-200 dark:border-gray-700 pt-8">
-                        <OfflineManager />
-                    </div>
-
-                </div>
-            </main>*/}
         </div>
     );
 }

@@ -38,7 +38,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onSearch, isSearching }) 
     ];
 
     return (
-        <section className="text-center py-16 px-4 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl mb-8 transition-colors duration-300 dark:from-primary/10 dark:to-secondary/10">
+        <section className="mt-6 text-center py-16 px-4 bg-primary/5 dark:bg-primary/10 rounded-3xl border border-primary/10 mb-10">
 
             <h1 className="text-3xl md:text-4xl font-bold mb-4 text-secondary dark:text-primary">
                 Find Relevant Research Papers with Semantic Search
