@@ -5,6 +5,7 @@ import {useNetworkMonitoring } from "./hooks/useNetworkMonitoring.ts";
 import { useSettingsStore } from './store/settingsStore';
 
 
+
 // Components
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -15,6 +16,7 @@ import LoadingPage from './pages/LoadingPage';
 import ErrorPage from './pages/ErrorPage';
 import SettingsPage from './pages/SettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
+import PaperDetailPage from './pages/PaperDetailPage';
 
 function App() {
     const { fontSize, lineHeight } = useSettingsStore();
@@ -95,7 +97,8 @@ function App() {
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/loading" element={<LoadingPage />} />
                     <Route path="/favorites" element={<FavoritesPage />} />
-                    <Route path="/settings"element={<SettingsPage />} />
+                    <Route path="/paper/:id" element={<PaperDetailPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/error" element={<ErrorPage type="500" />} />
                     <Route path="/network-error" element={<ErrorPage type="network" />} />
                     <Route path="*" element={<ErrorPage type="404" />} />

@@ -24,6 +24,7 @@ interface ResultsListProps {
     totalPages: number;
     onPageChange: (page: number) => void;
     onRetry: () => void;
+    currentQuery?: string;
 }
 
 const ResultsList: React.FC<ResultsListProps> = ({
@@ -36,7 +37,8 @@ const ResultsList: React.FC<ResultsListProps> = ({
                                                      currentPage,    // <--- New
                                                      totalPages,     // <--- New
                                                      onPageChange,    // <--- New
-                                                     onRetry
+                                                     onRetry,
+                                                     currentQuery
                                                  }) => {
 
     // Loading State
@@ -116,7 +118,10 @@ const ResultsList: React.FC<ResultsListProps> = ({
                         className="animate-fade-in"
                         style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                        <PaperCard paper={paper} />
+                        <PaperCard
+                            paper={paper}
+                            searchQuery={currentQuery} // <--- PASS IT DOWN
+                        />
                     </div>
                 ))}
             </div>

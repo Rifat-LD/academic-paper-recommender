@@ -97,7 +97,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
 
     return (
         <div className="flex flex-col min-h-screen bg-light dark:bg-dark-bg text-dark dark:text-light font-sans transition-colors duration-300">
-            <main className="container mx-auto px-4 flex-grow max-w-5xl">
+            <main className="container mx-auto px-4 py-8 max-w-4xl">
 
                 {/* 1. Hero / Main Error Section */}
                 <section className="text-center py-16 mb-12 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl animate-fade-in dark:from-primary/10 dark:to-secondary/10">
@@ -145,6 +145,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
                                 <div className="mt-6">
                                     <h3 className="text-lg font-bold mb-3 text-secondary dark:text-primary">Possible Causes:</h3>
                                     <ul className="list-disc pl-5 space-y-2 text-dark dark:text-gray-300 marker:text-red-500 marker:font-bold">
+                                        <li>Wrong URL</li>
                                         <li>Your internet connection is unstable or offline</li>
                                         <li>The semantic analysis service is temporarily overloaded</li>
                                         <li>Firewall or network restrictions are blocking the connection</li>
@@ -251,9 +252,6 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
                         className="bg-primary hover:bg-secondary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-primary/40 transition-all flex items-center justify-center gap-2"
                     >
                         <Home className="w-5 h-5" /> Return to Homepage
-                    </button>
-                    <button className="bg-transparent border-2 border-gray-300 dark:border-gray-600 text-dark dark:text-light hover:bg-light dark:hover:bg-dark-surface px-8 py-3 rounded-full font-bold transition-all flex items-center justify-center gap-2">
-                        <WifiOff className="w-5 h-5" /> View Cached Papers
                     </button>
                 </div>
             </main>

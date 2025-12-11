@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
 import { Eye, Heart } from 'lucide-react';
 import { useFavoritesStore } from '../../store/favoritesStore';
-import { UIPaper } from '../../api/papers'; // <--- Import the Master Type
+import { UIPaper } from '../../api/papers';
+import { Link } from 'react-router-dom';
 
 interface PaperCardProps {
-    paper: UIPaper; // <--- Use the Master Type here
+    paper: UIPaper;
+    searchQuery?: string;
 }
 
-const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
+// FIX IS HERE: Destructure 'searchQuery' from props
+const PaperCard: React.FC<PaperCardProps> = ({ paper, searchQuery }) => {
     const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore();
 
-    // id in UIPaper is always a string, so no need to cast, but String() checks are safe
     const isSaved = isFavorite(paper.id);
 
     const toggleSave = () => {
         if (isSaved) {
             removeFavorite(paper.id);
         } else {
-            // Since 'paper' is already a UIPaper, we can pass it directly!
-            // No need to reconstruct the object manually.
             addFavorite(paper);
         }
     };
@@ -41,13 +41,11 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
 
             {/* Card Content */}
             <div className="p-4 flex-grow">
-                {/* Abstract with Line Clamp and Dangerous HTML for highlighting spans */}
                 <p
                     className="text-gray-800 dark:text-gray-400 text-sm leading-relaxed mb-4 line-clamp-4 [&_.highlight]:bg-primary/10 [&_.highlight]:text-primary [&_.highlight]:px-1 [&_.highlight]:rounded [&_.highlight]:font-semibold"
                     dangerouslySetInnerHTML={{ __html: paper.abstract }}
                 />
 
-                {/* Relevance Bar */}
                 <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden">
                     <div
                         className="h-full bg-gradient-to-r from-success to-primary rounded-full transition-all duration-500 ease-out"
@@ -63,10 +61,17 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
             <div className="px-4 pb-4 pt-0 mt-auto">
                 <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
 
-                    <button className="flex items-center gap-1.5 bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-300 border-none cursor-pointer">
+                    <Link
+                        to={`/paper/${paper.id}`}
+                        state={{
+                            query: searchQuery,
+                            explanation: paper.explanation
+                        }}
+                        className="flex items-center gap-1.5 bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-300 border-none cursor-pointer decoration-0"
+                    >
                         <Eye className="w-4 h-4" />
                         View Details
-                    </button>
+                    </Link>
 
                     <button
                         onClick={toggleSave}

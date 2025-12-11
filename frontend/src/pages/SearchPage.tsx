@@ -17,6 +17,7 @@ export default function SearchPage() {
 
     // 2. PAGINATION STATE
     const [currentPage, setCurrentPage] = useState<number>(1);
+    const [currentQuery, setCurrentQuery] = useState<string>('');
 
 
     const validateQuery = (query: string): boolean => {
@@ -35,8 +36,8 @@ export default function SearchPage() {
 
         setIsLoading(true);
         setCurrentPage(1); // Reset pagination
+        setCurrentQuery(query);
         setLastQuery(query);
-
         try {
             // --- REAL API CALL START ---
             // We fetch all relevant papers (e.g., top 50) and let frontend paginate
@@ -113,6 +114,7 @@ export default function SearchPage() {
                         totalPages={totalPages}
                         onPageChange={handlePageChange}
                         onRetry={handleRetry}
+                        currentQuery={currentQuery}
                     />
                 </div>
             </main>

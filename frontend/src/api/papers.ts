@@ -30,6 +30,8 @@ export interface UIPaper {
     year: number;
     abstract: string;
     relevanceScore: number;
+    explanation?: string;
+    url?: string;
 }
 
 export const searchService = {
@@ -55,8 +57,31 @@ export const searchService = {
                 // Highlight logic handled by CSS, we pass raw abstract here
                 abstract: paper.abstract,
                 // Convert 0.95 -> 95
-                relevanceScore: Math.round(item.score * 100)
+                relevanceScore: Math.round(item.score * 100),
+                explanation: item.explanation,
+                url: paper.url
             };
         });
+    },
+    async getPaperById(id: string): Promise<UIPaper | null> {
+        try {
+            const response = await apiClient.get<BackendPaper>(`/papers/${id}`);
+            const paper = response.data;
+            const year = new Date(paper.published).getFullYear() || new Date().getFullYear();
+
+            // Mocking the relevance score as 100% since it's a direct view
+            // Mocking citations deterministically based on ID length
+            return {
+                id: paper.arxiv_id,
+                title: paper.title,
+                authors: paper.authors.join(", "),
+                year: year,
+                abstract: paper.abstract,
+                relevanceScore: 100
+            };
+        } catch (error) {
+            console.error("Failed to fetch paper details", error);
+            return null;
+        }
     }
 };

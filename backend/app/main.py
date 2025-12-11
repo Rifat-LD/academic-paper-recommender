@@ -3,9 +3,11 @@ import time
 import logging
 import psutil
 import socket
+import random
 
 from fastapi import FastAPI, Request, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Path
 
 # Import local modules
 from app.config import get_settings
@@ -24,7 +26,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
-
 # ---------------------------------------------------------
 # LIFESPAN MANAGER
 # ---------------------------------------------------------
@@ -213,3 +214,37 @@ async def recommend_papers(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error during search processing")
+
+@app.get("/papers/{paper_id}", response_model=PaperMetadata)
+async def get_paper_details(
+        paper_id: str = Path(..., description="The arXiv ID of the paper")
+):
+    """
+    Phase 3.1: Get full details for a specific paper.
+    """
+    if not engine.is_ready:
+        raise HTTPException(status_code=503, detail="AI Engine loading")
+
+    paper = engine.get_paper_by_id(paper_id)
+
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    # MOCK METRICS (Phase 3.1 Requirement: "Add citation count")
+    # In a real production app, this would come from Semantic Scholar API
+    # We use hashing to make the random number consistent for the same paper
+    random.seed(paper_id)
+    citations = random.randint(0, 500)
+
+    # We return the data matching PaperMetadata schema
+    return PaperMetadata(
+        arxiv_id=paper['arxiv_id'],
+        title=paper['title'],
+        abstract=paper['abstract'],
+        authors=paper['authors'],
+        published=paper['published'],
+        url=paper['url'],
+        categories=paper['categories']
+        # Note: We aren't passing citations in the basic schema yet,
+        # we will handle that in the Frontend UI enrichment to keep schemas simple.
+    )

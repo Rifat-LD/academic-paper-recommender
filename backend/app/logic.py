@@ -40,6 +40,20 @@ class SearchEngine:
         self.is_ready = True
         print(f"✅ Search Engine Online. Index Size: {len(self.papers)}")
 
+    def get_paper_by_id(self, arxiv_id: str):
+        """
+        Phase 3.1: Retrieve a specific paper by ID.
+        """
+        if not self.is_ready:
+            self.initialize()
+
+        # Linear search is fine for 1k papers.
+        # For 1M papers, we would use a hash map (dictionary) for O(1) lookup.
+        for paper in self.papers:
+            if paper['arxiv_id'] == arxiv_id:
+                return paper
+        return None
+
     def search(self, raw_query: str, top_k: int = 5):
         """
         Phase 3.3: Vector Search Implementation
