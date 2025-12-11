@@ -17,6 +17,7 @@ import ErrorPage from './pages/ErrorPage';
 import SettingsPage from './pages/SettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import PaperDetailPage from './pages/PaperDetailPage';
+import AboutPage from './pages/AboutPage';
 
 function App() {
     const { fontSize, lineHeight } = useSettingsStore();
@@ -99,6 +100,7 @@ function App() {
                     <Route path="/favorites" element={<FavoritesPage />} />
                     <Route path="/paper/:id" element={<PaperDetailPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/about" element={<AboutPage />} />
                     <Route path="/error" element={<ErrorPage type="500" />} />
                     <Route path="/network-error" element={<ErrorPage type="network" />} />
                     <Route path="*" element={<ErrorPage type="404" />} />

@@ -39,10 +39,9 @@ const Header: React.FC<HeaderProps> = ({ isDark, toggleTheme }) => {
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex items-center gap-4">
                         <Link to="/" className={navClass('/')}>Search</Link>
-                        {/* Favorites will be built in Phase 3, linking to Offline for now */}
                         <Link to="/favorites" className={navClass('/favorites')}>Favorites</Link>
-
                         <Link to="/settings" className={navClass('/settings')}>Settings</Link>
+                        <Link to="/about" className={navClass('/about')}>About</Link>
 
                         {/* Theme Toggle */}
                         <button
