@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import apiClient from './api/client'; // Import API client
 import {useNetworkMonitoring } from "./hooks/useNetworkMonitoring.ts";
+import OfflinePage from './pages/OfflinePage';
 
 // Components
 import Header from './components/layout/Header';
@@ -65,6 +66,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/loading" element={<LoadingPage />} />
+                    <Route path="/offline" element={<OfflinePage />} />
                     <Route path="/error" element={<ErrorPage type="500" />} />
                     <Route path="/network-error" element={<ErrorPage type="network" />} />
                     <Route path="*" element={<ErrorPage type="404" />} />
