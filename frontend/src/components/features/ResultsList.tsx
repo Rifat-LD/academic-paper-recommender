@@ -23,6 +23,7 @@ interface ResultsListProps {
     currentPage: number;
     totalPages: number;
     onPageChange: (page: number) => void;
+    onRetry: () => void;
 }
 
 const ResultsList: React.FC<ResultsListProps> = ({
@@ -34,7 +35,8 @@ const ResultsList: React.FC<ResultsListProps> = ({
                                                      onSortChange,
                                                      currentPage,    // <--- New
                                                      totalPages,     // <--- New
-                                                     onPageChange    // <--- New
+                                                     onPageChange,    // <--- New
+                                                     onRetry
                                                  }) => {
 
     // Loading State
@@ -55,7 +57,12 @@ const ResultsList: React.FC<ResultsListProps> = ({
                 <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-5" />
                 <h3 className="text-2xl font-bold mb-3 text-red-600 dark:text-red-400">Search Failed</h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
-                <button className="bg-primary hover:bg-secondary text-white py-2 px-6 rounded-lg font-semibold transition-colors inline-flex items-center gap-2">
+
+                {/* ADDED onClick HANDLER */}
+                <button
+                    onClick={onRetry}
+                    className="bg-primary hover:bg-secondary text-white py-2 px-6 rounded-lg font-semibold transition-colors inline-flex items-center gap-2 cursor-pointer"
+                >
                     <RefreshCw className="w-4 h-4" /> Retry
                 </button>
             </div>

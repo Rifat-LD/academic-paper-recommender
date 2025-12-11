@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
 import { Eye, Heart } from 'lucide-react';
-
-interface PaperProps {
-    id: string | number;
-    title: string;
-    authors: string;
-    year: number;
-    abstract: string; // Can contain HTML for highlights
-    relevanceScore: number;
-}
+import { useFavoritesStore } from '../../store/favoritesStore';
+import { UIPaper } from '../../api/papers'; // <--- Import the Master Type
 
 interface PaperCardProps {
-    paper: PaperProps;
+    paper: UIPaper; // <--- Use the Master Type here
 }
 
 const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
-    const [isSaved, setIsSaved] = useState(false);
+    const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore();
+
+    // id in UIPaper is always a string, so no need to cast, but String() checks are safe
+    const isSaved = isFavorite(paper.id);
 
     const toggleSave = () => {
-        setIsSaved(!isSaved);
+        if (isSaved) {
+            removeFavorite(paper.id);
+        } else {
+            // Since 'paper' is already a UIPaper, we can pass it directly!
+            // No need to reconstruct the object manually.
+            addFavorite(paper);
+        }
     };
 
     return (
@@ -69,12 +71,12 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
                     <button
                         onClick={toggleSave}
                         className={`
-              flex items-center justify-center p-2 rounded-lg border transition-colors duration-300 cursor-pointer
-              ${isSaved
+                            flex items-center justify-center p-2 rounded-lg border transition-colors duration-300 cursor-pointer
+                            ${isSaved
                             ? 'text-primary dark:text-success border-transparent'
                             : 'bg-transparent border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
                         }
-            `}
+                        `}
                         aria-label={isSaved ? "Remove from favorites" : "Add to favorites"}
                     >
                         <Heart className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />

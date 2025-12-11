@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import SearchSection from '../components/features/SearchSection';
 import ResultsList from '../components/features/ResultsList';
 import { searchService, UIPaper } from '../api/papers';
+//import OfflineManager from "../components/features/OfflineManager.tsx";
 
 // 1. CONSTANTS
 const ITEMS_PER_PAGE = 6; // Shows 2 rows of 3 on desktop
@@ -12,9 +13,11 @@ export default function SearchPage() {
     const [results, setResults] = useState<UIPaper[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<string>('Relevance');
+    const [lastQuery, setLastQuery] = useState<string>('');
 
     // 2. PAGINATION STATE
     const [currentPage, setCurrentPage] = useState<number>(1);
+
 
     const validateQuery = (query: string): boolean => {
         if (!query.trim()) return false;
@@ -32,6 +35,7 @@ export default function SearchPage() {
 
         setIsLoading(true);
         setCurrentPage(1); // Reset pagination
+        setLastQuery(query);
 
         try {
             // --- REAL API CALL START ---
@@ -51,6 +55,12 @@ export default function SearchPage() {
             setResults([]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleRetry = () => {
+        if (lastQuery) {
+            handleSearch(lastQuery);
         }
     };
 
@@ -98,9 +108,38 @@ export default function SearchPage() {
                         currentPage={currentPage}
                         totalPages={totalPages}
                         onPageChange={handlePageChange}
+                        onRetry={handleRetry}
                     />
                 </div>
             </main>
+            {/*// ... inside SearchPage.tsx return statement ...
+
+            <main className="flex-grow">
+                <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <SearchSection
+                        onSearch={handleSearch}
+                        isSearching={isLoading}
+                    />
+
+                    <ResultsList
+                        papers={paginatedResults}
+                        isLoading={isLoading}
+                        error={error}
+                        totalResults={sortedResults.length}
+                        sortBy={sortBy}
+                        onSortChange={setSortBy}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                    />
+
+                     TEMP: Offline Manager for Testing Phase 2.4
+                    <div className="mt-16 mb-8 border-t border-gray-200 dark:border-gray-700 pt-8">
+                        <OfflineManager />
+                    </div>
+
+                </div>
+            </main>*/}
         </div>
     );
 }
