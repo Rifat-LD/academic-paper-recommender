@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     APP_ENV: str = "development" # 'development' or 'production'
 
+    # Security Configuration
+    SECRET_KEY: str = "offline-local-secret-key-change-me-if-exposed"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 Days (Long login for convenience)
+
     # CORS Configuration (Phase 2.1.1 - Security)
     # Allows the React frontend to communicate with this backend
     # CORS Configuration

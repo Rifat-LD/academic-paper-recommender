@@ -5,27 +5,36 @@ import psutil
 import socket
 import random
 
-from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi import FastAPI, Request, HTTPException, Query, Path, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Path
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlmodel import Session, select
+from jose import jwt, JWTError
 
 # Import local modules
 from app.config import get_settings
 from app.logic import engine
+from app.database import create_db_and_tables, get_session
+from app.models import User
+from app.auth import get_password_hash, verify_password, create_access_token, settings
+
+from sqlmodel import Session, select
 # Import all required Pydantic models
 from app.schemas import (
     SearchResponse,
     SearchResultItem,
     PaperMetadata,
     HealthResponse,
-    SystemResources
+    SystemResources,
+    UserCreate, UserLogin, Token, UserRead, UserQuestionReq, UserQuestionRes, UserResetReq
 )
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 settings = get_settings()
+
 # ---------------------------------------------------------
 # LIFESPAN MANAGER
 # ---------------------------------------------------------
@@ -37,6 +46,9 @@ async def lifespan(app: FastAPI):
     2. Shutdown: Clean up resources.
     """
     logger.info("🚀 Starting Application...")
+    # 1. Initialize Database
+    create_db_and_tables()
+    logger.info("📂 Database tables created.")
     logger.info(f"🌍 Environment: {settings.APP_ENV}")
 
     try:
@@ -49,6 +61,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("🛑 Shutting down Application...")
 
+
 # ---------------------------------------------------------
 # APP INITIALIZATION
 # ---------------------------------------------------------
@@ -57,6 +70,33 @@ app = FastAPI(
     version=settings.VERSION,
     lifespan=lifespan
 )
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+# Middleware / Dependency to protect routes
+async def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):
+    """
+    Decodes the token and retrieves the user.
+    Acts as MIDDLEWARE for protected routes.
+    """
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    statement = select(User).where(User.username == username)
+    user = session.exec(statement).first()
+    if user is None:
+        raise credentials_exception
+    return user
 
 # ---------------------------------------------------------
 # MIDDLEWARE
@@ -161,10 +201,118 @@ async def health_check():
         alerts=alerts
     )
 
+# --- AUTH ENDPOINTS ---
+@app.post("/auth/register")
+async def register_user(user_data: UserCreate, session: Session = Depends(get_session)):
+    # 1. TRIM WHITESPACE (Crucial fix for "Invalid Password" issues)
+    clean_username = user_data.username.strip()
+
+    # 2. CHECK DUPLICATES EXPLICITLY
+    statement = select(User).where(User.username == clean_username)
+    existing_user = session.exec(statement).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    # 3. HASH EVERYTHING
+    hashed_pwd = get_password_hash(user_data.password)
+    # We strip the answer too so "Fluffy " matches "Fluffy"
+    hashed_answer = get_password_hash(user_data.security_answer.strip())
+
+    # 4. SAVE
+    new_user = User(
+        username=clean_username,
+        hashed_password=hashed_pwd,
+        security_question=user_data.security_question,
+        security_answer_hash=hashed_answer
+    )
+
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+
+    return {"message": "User created successfully", "username": new_user.username}
+
+@app.post("/auth/login", response_model=Token)
+async def login_for_access_token(
+        form_data: OAuth2PasswordRequestForm = Depends(), # <--- Changed this line
+        session: Session = Depends(get_session)
+):
+    """
+    Authenticates a user and returns a JWT Access Token.
+    Accepts OAuth2 Form Data (username, password).
+    """
+    # 1. Find User
+    statement = select(User).where(User.username == form_data.username)
+    user = session.exec(statement).first()
+
+    # 2. Check Password
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 3. Generate Token
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/me", response_model=UserRead)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    """
+    Returns the current user's profile.
+    REQUIRES AUTHENTICATION.
+    """
+    return current_user
+
+# ---------------------------------------------------------
+# RECOVERY ENDPOINTS
+# ---------------------------------------------------------
+
+@app.post("/auth/get-question", response_model=UserQuestionRes)
+async def get_security_question(req: UserQuestionReq, session: Session = Depends(get_session)):
+    """
+    Step 1: Check if user exists and return their security question.
+    """
+    statement = select(User).where(User.username == req.username)
+    user = session.exec(statement).first()
+
+    if not user:
+        # Security: In a web app, we might hide this.
+        # For a local app, explicit error is better UX.
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"username": user.username, "security_question": user.security_question}
+
+@app.post("/auth/reset-password")
+async def reset_password(req: UserResetReq, session: Session = Depends(get_session)):
+    """
+    Step 2: Verify security answer and update password.
+    """
+    statement = select(User).where(User.username == req.username)
+    user = session.exec(statement).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Verify Answer (Compare Hash)
+    if not verify_password(req.security_answer, user.security_answer_hash):
+        raise HTTPException(status_code=400, detail="Incorrect security answer")
+
+    # Update Password
+    user.hashed_password = get_password_hash(req.new_password)
+    session.add(user)
+    session.commit()
+
+    return {"message": "Password updated successfully"}
+
+# --- SEARCH ENDPOINTS (Protected) ---
+
 @app.get("/recommend", response_model=SearchResponse)
 async def recommend_papers(
         q: str = Query(..., min_length=3, max_length=300, description="Search query"),
-        limit: int = Query(5, ge=1, le=50, description="Results limit")
+        limit: int = Query(5, ge=1, le=50, description="Results limit"),
+        current_user: User = Depends(get_current_user)
 ):
     """
     Semantic Search Endpoint.
@@ -217,7 +365,8 @@ async def recommend_papers(
 
 @app.get("/papers/{paper_id}", response_model=PaperMetadata)
 async def get_paper_details(
-        paper_id: str = Path(..., description="The arXiv ID of the paper")
+        paper_id: str = Path(..., description="The arXiv ID of the paper"),
+        current_user: User = Depends(get_current_user)
 ):
     """
     Phase 3.1: Get full details for a specific paper.
