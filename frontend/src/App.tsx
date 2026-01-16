@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import apiClient from './api/client'; // Import API client
 import {useNetworkMonitoring } from "./hooks/useNetworkMonitoring.ts";
 import { useSettingsStore } from './store/settingsStore';
+import ProtectedRoute from './components/layout/ProtectedRoute';
 
 
 
@@ -18,6 +19,9 @@ import SettingsPage from './pages/SettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import PaperDetailPage from './pages/PaperDetailPage';
 import AboutPage from './pages/AboutPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 function App() {
     const { fontSize, lineHeight } = useSettingsStore();
@@ -95,15 +99,26 @@ function App() {
 
             <main className="flex-grow">
                 <Routes>
-                    <Route path="/" element={<SearchPage />} />
-                    <Route path="/loading" element={<LoadingPage />} />
-                    <Route path="/favorites" element={<FavoritesPage />} />
-                    <Route path="/paper/:id" element={<PaperDetailPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
+                    {/* --- PUBLIC ROUTES (Anyone can access) --- */}
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/about" element={<AboutPage />} />
+
+                    {/* System Routes can be public or protected depending on preference */}
+                    <Route path="/loading" element={<LoadingPage />} />
                     <Route path="/error" element={<ErrorPage type="500" />} />
+
+                    {/* --- PROTECTED ROUTES (Must be logged in) --- */}
+                    <Route element={<ProtectedRoute />}>
+                        <Route path="/" element={<SearchPage />} />
+                        <Route path="/paper/:id" element={<PaperDetailPage />} />
+                        <Route path="/favorites" element={<FavoritesPage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
                     <Route path="/network-error" element={<ErrorPage type="network" />} />
                     <Route path="*" element={<ErrorPage type="404" />} />
+                    {/* Authentication Routes */}
                 </Routes>
             </main>
 

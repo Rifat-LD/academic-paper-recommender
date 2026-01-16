@@ -1,6 +1,13 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    security_question: str
+    security_answer: str
+
 # ---------------------------------------------------------
 # REQUEST MODELS
 # ---------------------------------------------------------
@@ -74,3 +81,33 @@ class HealthResponse(BaseModel):
     ai_engine_status: str  # "ready", "loading", "failed"
     system: SystemResources
     alerts: List[str] = [] # List of warning messages
+
+# ---------------------------------------------------------
+# AUTHENTICATION SCHEMAS (Phase A.5)
+# ---------------------------------------------------------
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class UserRead(BaseModel):
+    id: int
+    username: str
+
+# ---------------------------------------------------------
+# PASSWORD RESET SCHEMAS
+# ---------------------------------------------------------
+class UserQuestionReq(BaseModel):
+    username: str
+
+class UserQuestionRes(BaseModel):
+    username: str
+    security_question: str
+
+class UserResetReq(BaseModel):
+    username: str
+    security_answer: str
+    new_password: str

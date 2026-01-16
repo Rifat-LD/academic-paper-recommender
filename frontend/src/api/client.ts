@@ -10,5 +10,36 @@ const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
 });
+// REQUEST INTERCEPTOR (The Courier)
+apiClient.interceptors.request.use(
+    (config) => {
+        // dynamically import store to avoid circular dependencies or initialization issues
+        // We access localStorage directly for speed and simplicity in the interceptor
+        // (Zustand persists to 'auth-storage' in localStorage)
+        const storageData = localStorage.getItem('auth-storage');
 
+        if (storageData) {
+            const parsed = JSON.parse(storageData);
+            const token = parsed.state?.token;
+
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// RESPONSE INTERCEPTOR (Optional: Handle 401s automatically)
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token expired or invalid -> Force logout logic could go here
+            console.warn("Unauthorized! Token might be expired.");
+        }
+        return Promise.reject(error);
+    }
+);
 export default apiClient;
