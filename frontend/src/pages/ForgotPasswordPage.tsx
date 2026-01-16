@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User, Key, ArrowRight, ArrowLeft, ShieldCheck, Loader2, CheckCircle2 } from 'lucide-react';
 import apiClient from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import PasswordInput from '../components/ui/PasswordInput';
 
 export default function ForgotPasswordPage() {
     const navigate = useNavigate();
@@ -148,17 +149,11 @@ export default function ForgotPasswordPage() {
 
                             <div className="space-y-1">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                                <div className="relative">
-                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="password"
-                                        required
-                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 text-dark dark:text-light"
-                                        placeholder="Enter new password"
-                                        value={securityData.newPassword}
-                                        onChange={(e) => setSecurityData({...securityData, newPassword: e.target.value})}
-                                    />
-                                </div>
+                                <PasswordInput
+                                    value={securityData.newPassword}
+                                    onChange={(e) => setSecurityData({...securityData, newPassword: e.target.value})}
+                                    placeholder="Enter new password"
+                                />
                             </div>
 
                             <button

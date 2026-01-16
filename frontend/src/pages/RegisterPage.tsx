@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Lock, ShieldQuestion, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import { User, Lock, ShieldQuestion, ShieldCheck, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import apiClient from '../api/client'; // <--- Import API Client
+import PasswordInput from '../components/ui/PasswordInput';
 
 export default function RegisterPage() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const { isAuthenticated } = useAuthStore();
     const [error, setError] = useState(''); // State for error messages
+    const [success, setSuccess] = useState(false);
 
     const [formData, setFormData] = useState({
         username: '',
@@ -37,12 +39,22 @@ export default function RegisterPage() {
         };
 
         try {
-            // --- REAL API CALL ---
-            await apiClient.post('/auth/register', payload);
+            // Call Backend
+            await apiClient.post('/auth/register', {
+                username: formData.username,
+                password: formData.password,
+                security_question: formData.securityQuestion,
+                security_answer: formData.securityAnswer
+            });
 
-            // Success!
-            alert("Account created successfully! Please login.");
-            navigate('/login');
+            // Show Success State
+            setSuccess(true);
+            setIsLoading(false);
+
+            // Auto Redirect after 1.5 seconds
+            setTimeout(() => {
+                navigate('/login');
+            }, 1500);
 
         } catch (err: any) {
             console.error(err);
@@ -75,6 +87,12 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="p-8 pt-2">
+                    {success && (
+                        <div className="mb-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 px-4 py-3 rounded-lg flex items-center gap-3 animate-fade-in">
+                            <CheckCircle2 className="w-5 h-5" />
+                            <span className="text-sm font-semibold">Account created! Redirecting...</span>
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Username */}
                         <div className="space-y-1">
@@ -95,17 +113,11 @@ export default function RegisterPage() {
                         {/* Password */}
                         <div className="space-y-1">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 text-dark dark:text-light"
-                                    placeholder="Create a strong password"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                />
-                            </div>
+                            <PasswordInput
+                                value={formData.password}
+                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                placeholder="Create a strong password"
+                            />
                         </div>
 
                         {/* Security Section Header */}
